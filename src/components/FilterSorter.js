@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {IntNumberOnlyTextbox, FloatNumberOnlyTextbox} from "./Textbox";
+import {FloatNumberOnlyTextbox, TextBox} from "./Textbox";
 import {DatePicker} from "./DatePicker";
 import {DropDownList} from "./DropDownList";
 import {Checkbox} from "./Checkbox";
@@ -16,20 +16,21 @@ export function FilterSorter(props) {
         }
     };
     
-    const FILTER_TYPE_INTEGER_INTERVAL = 0;
-    const FILTER_TYPE_FLOAT_INTERVAL = 1;
-    const FILTER_TYPE_DATE_INTERVAL = 2;
-    const FILTER_TYPE_LIST = 3;
+    const FilterType = {
+        IntegerInterval: 0, 
+        FloatInterval: 1, 
+        DateInterval: 2, 
+        CharacterString: 3,
+        List: 4
+    };
 
     const defaultFilters = {
-        "Store":        [FILTER_TYPE_INTEGER_INTERVAL, NaN, NaN],
-        "Date":         [FILTER_TYPE_DATE_INTERVAL,    NaN, NaN],
-        "Weekly_Sales": [FILTER_TYPE_FLOAT_INTERVAL,   NaN, NaN], 
-        "Holiday_Flag": [FILTER_TYPE_LIST,             -1],
-        "Temperature":  [FILTER_TYPE_FLOAT_INTERVAL,   NaN, NaN], 
-        "Fuel_Price":   [FILTER_TYPE_FLOAT_INTERVAL,   NaN, NaN],
-        "CPI":          [FILTER_TYPE_FLOAT_INTERVAL,   NaN, NaN], 
-        "Unemployment": [FILTER_TYPE_FLOAT_INTERVAL,   NaN, NaN]
+        "title":         [FilterType.CharacterString, NaN],
+        "score":         [FilterType.FloatInterval,   NaN, NaN],
+        "score_phrase":  [FilterType.List, -1], 
+        "platform":      [FilterType.List, -1],
+        "genre":         [FilterType.List, -1], 
+        "release_date":  [FilterType.DateInterval,    NaN, NaN]
     };
 
     //false means ascending order, true means descending.
@@ -63,8 +64,8 @@ export function FilterSorter(props) {
         const keys = Object.keys(filtersCopy);
         for(let i = 0; i < keys.length; i++) {
             const key = keys[i];
-
-            if(filtersCopy[key][0] === FILTER_TYPE_INTEGER_INTERVAL) {
+            
+            if(filtersCopy[key][0] === FilterType.IntegerInterval) {
                 const a = parseInt(filtersCopy[key][1]);
                 const b = parseInt(filtersCopy[key][2]);
                 if(!isNaN(a) && (isNaN(b) || b >= a)) {
@@ -74,7 +75,7 @@ export function FilterSorter(props) {
                     tableData = tableData.filter(item => item[key] <= b);
                 }
             }
-            else if(filtersCopy[key][0] === FILTER_TYPE_FLOAT_INTERVAL) {
+            else if(filtersCopy[key][0] === FilterType.FloatInterval) {
                 const a = parseFloat(filtersCopy[key][1]);
                 const b = parseFloat(filtersCopy[key][2]); 
                 if(!isNaN(a) && (isNaN(b) || b >= a)) {
@@ -84,27 +85,36 @@ export function FilterSorter(props) {
                     tableData = tableData.filter(item => item[key] <= b);
                 }
             }
-            else if(filtersCopy[key][0] === FILTER_TYPE_DATE_INTERVAL){
+            else if(filtersCopy[key][0] === FilterType.DateInterval) {
                 const a = Date.parse(filtersCopy[key][1]);
                 const b = Date.parse(filtersCopy[key][2]); 
 
-                const stringToDate = (str, delimiter) => {
-                    let parts = str.split(delimiter);
-                    let dateObject = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
-                    return dateObject;
+                const convertToDate = (item) => {
+                    return new Date(item["release_year"] + "-" + item["release_month"] + "-" + item["release_day"]);
                 };
 
                 if(a && (!b || b >= a)) {
-                    tableData = tableData.filter(item => stringToDate(item[key], "-") >= a);
+                    tableData = tableData.filter(item => convertToDate(item) >= a);
                 }
                 if(b && (!a || b >= a)) {
-                    tableData = tableData.filter(item => stringToDate(item[key], "-") <= b);
+                    tableData = tableData.filter(item => convertToDate(item) <= b);
+                }
+            }
+            else if(filtersCopy[key][0] === FilterType.CharacterString) {
+                if(!isNaN(filtersCopy[key][1])) {
+                    const a = filtersCopy[key][1].toLowerCase();
+                    tableData = tableData.filter(item => item[key].toLowerCase().includes(a));
                 }
             }
             else {
-                const a = parseInt(filtersCopy[key][1]);
-                if(a !== -1) {
-                    tableData = tableData.filter(item => parseInt(item[key]) === a);
+                if(parseInt(filtersCopy[key][1]) !== -1) {
+                    if(filtersCopy[key][1] === "") {
+                        tableData = tableData.filter(item => item[key] === "");
+                    }
+                    else {
+                        const a = filtersCopy[key][1].toLowerCase();
+                        tableData = tableData.filter(item => item[key].toLowerCase().includes(a));
+                    }
                 }
             }
         }
@@ -120,6 +130,7 @@ export function FilterSorter(props) {
         //The type check is done here to avoid using "==" later.
         sortsCopy[index][sortName] = isNaN(parseInt(sortValue)) ? sortValue : parseInt(sortValue);
 
+        //Reset levels of sort if the previous level was modified.
         if(index === 0) {
             if(sortsCopy[0]["key"] === -1) {
                 sortsCopy[0]["order"] = false;
@@ -159,26 +170,24 @@ export function FilterSorter(props) {
             return tableData;
         }
 
-        const numberComparator = (a, b) => {
-            return a < b ? -1 : (a > b ? 1 : 0);
-        };
-
-        const dateComparator = (a, b) => {
-            const stringToDate = (str, delimiter) => {
-                let parts = str.split(delimiter);
-                let dateObject = new Date(parts[2] + "-" + parts[1] + "-" + parts[0]);
-                return dateObject;
+        const dateComparator = (a, b, key) => {
+            const convertToDate = (item) => {
+                return new Date(item["release_year"] + "-" + item["release_month"] + "-" + item["release_day"]);
             };
 
-            a = stringToDate(a, "-");
-            b = stringToDate(b, "-");
+            a = convertToDate(a);
+            b = convertToDate(b);
 
             return a < b ? -1 : (a > b ? 1 : 0);
         };
 
-        const comparator1 = sortsCopy[0]["key"] === "Date" ? dateComparator : numberComparator; 
-        const comparator2 = sortsCopy[1]["key"] === "Date" ? dateComparator : numberComparator; 
-        const comparator3 = sortsCopy[2]["key"] === "Date" ? dateComparator : numberComparator; 
+        const otherTypesComparator = (a, b, key) => {
+            return a[key] < b[key] ? -1 : (a[key] > b[key] ? 1 : 0);
+        };
+
+        const comparator1 = sortsCopy[0]["key"] === "release_date" ? dateComparator : otherTypesComparator; 
+        const comparator2 = sortsCopy[1]["key"] === "release_date" ? dateComparator : otherTypesComparator; 
+        const comparator3 = sortsCopy[2]["key"] === "release_date" ? dateComparator : otherTypesComparator; 
 
         const order1 = sortsCopy[0]["order"] ? -1 : 1;
         const order2 = sortsCopy[1]["order"] ? -1 : 1;
@@ -186,7 +195,7 @@ export function FilterSorter(props) {
 
         if(sortsCopy[1]["key"] === -1) {
             const oneLevelSort = (a, b) => {
-                let value = comparator1(a[sortsCopy[0]["key"]], b[sortsCopy[0]["key"]]);
+                let value = comparator1(a, b, sortsCopy[0]["key"]);
                 value = (value === 0) ? 1 : value;
                 return value === -1 ? -order1 : order1;
             };
@@ -195,12 +204,12 @@ export function FilterSorter(props) {
         }
         else if(sortsCopy[2]["key"] === -1) {
             const twoLevelSort = (a, b) => {
-                let value = comparator1(a[sortsCopy[0]["key"]], b[sortsCopy[0]["key"]]);
+                let value = comparator1(a, b, sortsCopy[0]["key"]);
                 if(value !== 0) {
                     return value === -1 ? -order1 : order1;
                 }
 
-                let value2 = comparator2(a[sortsCopy[1]["key"]], b[sortsCopy[1]["key"]]);
+                let value2 = comparator2(a, b, sortsCopy[1]["key"]);
                 value2 = (value2 === 0) ? 1 : value2;
                 return value2 === -1 ? -order2 : order2;
             };
@@ -209,17 +218,17 @@ export function FilterSorter(props) {
         }
 
         const threeLevelSort = (a, b) => {
-            let value = comparator1(a[sortsCopy[0]["key"]], b[sortsCopy[0]["key"]]);
+            let value = comparator1(a, b, sortsCopy[0]["key"]);
             if(value !== 0) {
                 return value === -1 ? -order1 : order1;
             }
 
-            let value2 = comparator2(a[sortsCopy[1]["key"]], b[sortsCopy[1]["key"]]);
+            let value2 = comparator2(a, b, sortsCopy[1]["key"]);
             if(value2 !== 0) {
                 return value2 === -1 ? -order2 : order2;
             }
                 
-            let value3 = comparator3(a[sortsCopy[2]["key"]], b[sortsCopy[2]["key"]]);
+            let value3 = comparator3(a, b, sortsCopy[2]["key"]);
             value3 = (value3 === 0) ? 1 : value3;
             return value3 === -1 ? -order3 : order3;
         };
@@ -227,16 +236,55 @@ export function FilterSorter(props) {
         return tableData.sort(threeLevelSort);
     };
 
+    const scorePhrases = [
+        [-1, "Не фильтровать"],
+        ["Masterpiece", "Masterpiece (Шедевр)"],
+        ["Amazing", "Amazing (Замечательно)"],
+        ["Great", "Great (Отлично)"],
+        ["Good", "Good (Хорошо)"],
+        ["Okay", "Okay (Пойдёт)"],
+        ["Mediocre", "Mediocre (Посредственно)"], 
+        ["Bad", "Bad (Плохо)"],
+        ["Awful", "Awful (Ужасно)"],
+        ["Painful", "Painful (Тяжко)"],
+        ["Unbearable", "Unbearable (Невыносимо)"],
+        ["Disaster", "Disaster (Катастрофа)"]
+    ];
+    
+    const [platforms, genres] = React.useMemo(() => {
+        //https://gist.github.com/JamieMason
+        const groupBy = key => array =>
+            array.reduce((objectsByKeyValue, obj) => {
+                const value = obj[key];
+                objectsByKeyValue[value] = (objectsByKeyValue[value] || []).concat(obj);
+                return objectsByKeyValue;
+            }, {});
+        
+        //Generate platforms list.
+        const groupByPlatform = groupBy("platform");
+        //Dropdown lists accept array of pairs of actual and displayed values.
+        let platforms = [[-1, "Не фильтровать"]];
+        Object.keys(groupByPlatform(props.getRawTableData())).sort().map(item => platforms.push([item, item]));
+        
+        //Generate genres list.
+        const groupByGenre = groupBy("genre");
+        let temp = [];
+        Object.keys(groupByGenre(props.getRawTableData())).map(item => item.split(", ").map(subitem => temp.push(subitem)));
+        let genres = [[-1, "Не фильтровать"]];
+        //Some games don't have a genre field.
+        [...new Set(temp)].sort().map(item => item === "" ? genres.push(["", "Не указан"]) : genres.push([item, item]));
+
+        return [platforms, genres];
+    }, []);
+
     const sortKeys = [
         [-1, "Нет"], 
-        ["Store", "Магазин"], 
-        ["Date", "Дата"], 
-        ["Weekly_Sales", "Продажи за неделю"], 
-        ["Holiday_Flag", "Выходной"], 
-        ["Temperature", "Температура"], 
-        ["Fuel_Price", "Цена топлива"], 
-        ["CPI", "Цена за показ"], 
-        ["Unemployment", "Безработица"]
+        ["title", "Название"], 
+        ["score", "Баллы"], 
+        ["score_phrase", "Словесная оценка"], 
+        ["platform", "Платформа"], 
+        ["genre", "Жанр"], 
+        ["release_date", "Дата выхода"]
     ];
 
     const sort1Disabled = sorts[0]["key"] === -1;
@@ -256,46 +304,34 @@ export function FilterSorter(props) {
                 <table className="table-controls">
                     <tbody>
                         <tr>
-                            <td>Магазин:</td>
-                            <td>от <IntNumberOnlyTextbox value={filters["Store"][1]} filterName="Store" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <IntNumberOnlyTextbox value={filters["Store"][2]} filterName="Store" index={2} updateFilters={updateFilters}/></td>
-                        </tr>
-                        <tr>
-                            <td>Дата:</td>
-                            <td>от <DatePicker value={filters["Date"][1]} filterName="Date" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <DatePicker value={filters["Date"][2]} filterName="Date" index={2} updateFilters={updateFilters}/></td>
-                        </tr>
-                        <tr>
-                            <td>Продажи за неделю:</td>
-                            <td>от <FloatNumberOnlyTextbox value={filters["Weekly_Sales"][1]} filterName="Weekly_Sales" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <FloatNumberOnlyTextbox value={filters["Weekly_Sales"][2]} filterName="Weekly_Sales" index={2} updateFilters={updateFilters}/></td>
-                        </tr>
-                        <tr>
-                            <td>Выходной:</td>
-                            <td>
-                                <DropDownList values={[[-1, "Не важно"], [1, "Да"], [0, "Нет"]]} selectedValue={filters["Holiday_Flag"][1]} disabled={false} filterName="Holiday_Flag" index={1} updateFilters={updateFilters}/>
-                            </td>
+                            <td>Название:</td>
+                            <td><TextBox value={filters["title"][1]} filterName="title" index={1} updateFilters={updateFilters}/></td>
                             <td></td>
                         </tr>
                         <tr>
-                            <td>Температура:</td>
-                            <td>от <FloatNumberOnlyTextbox value={filters["Temperature"][1]} filterName="Temperature" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <FloatNumberOnlyTextbox value={filters["Temperature"][2]} filterName="Temperature" index={2} updateFilters={updateFilters}/></td>
+                            <td>Баллы:</td>
+                            <td>от <FloatNumberOnlyTextbox value={filters["score"][1]} filterName="score" index={1} updateFilters={updateFilters}/></td>
+                            <td>до <FloatNumberOnlyTextbox value={filters["score"][2]} filterName="score" index={2} updateFilters={updateFilters}/></td>
                         </tr>
                         <tr>
-                            <td>Цена топлива:</td>
-                            <td>от <FloatNumberOnlyTextbox value={filters["Fuel_Price"][1]} filterName="Fuel_Price" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <FloatNumberOnlyTextbox value={filters["Fuel_Price"][2]} filterName="Fuel_Price" index={2} updateFilters={updateFilters}/></td>
+                            <td>Словесная оценка:</td>
+                            <td><DropDownList values={scorePhrases} selectedValue={filters["score_phrase"][1]} filterName="score_phrase" index={1} updateFilters={updateFilters}/></td>
+                            <td></td>
                         </tr>
                         <tr>
-                            <td>Цена за показ:</td>
-                            <td>от <FloatNumberOnlyTextbox value={filters["CPI"][1]} filterName="CPI" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <FloatNumberOnlyTextbox value={filters["CPI"][2]} filterName="CPI" index={2} updateFilters={updateFilters}/></td>
+                            <td>Платформа:</td>
+                            <td><DropDownList values={platforms} selectedValue={filters["platform"][1]} filterName="platform" index={1} updateFilters={updateFilters}/></td>
+                            <td></td>
                         </tr>
                         <tr>
-                            <td>Безработица:</td>
-                            <td>от <FloatNumberOnlyTextbox value={filters["Unemployment"][1]} filterName="Unemployment" index={1} updateFilters={updateFilters}/></td>
-                            <td>до <FloatNumberOnlyTextbox value={filters["Unemployment"][2]} filterName="Unemployment" index={2} updateFilters={updateFilters}/></td>
+                            <td>Жанр:</td>
+                            <td><DropDownList values={genres} selectedValue={filters["genre"][1]} filterName="genre" index={1} updateFilters={updateFilters}/></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>Дата выхода:</td>
+                            <td>от <DatePicker value={filters["release_date"][1]} filterName="release_date" index={1} updateFilters={updateFilters}/></td>
+                            <td>до <DatePicker value={filters["release_date"][2]} filterName="release_date" index={2} updateFilters={updateFilters}/></td>
                         </tr>
                         <tr>
                             <td></td>

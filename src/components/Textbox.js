@@ -35,3 +35,15 @@ export function FloatNumberOnlyTextbox(props) {
         <input type="text" value={displayedText} onChange={onChange}/>
     );
 }
+
+export function TextBox(props) {
+    const onChange = (event) => {
+        props.updateFilters(props.filterName, event.target.value === "" ? NaN : event.target.value, props.index);
+    }
+
+    const displayedText = isNaN(props.value) ? "" : props.value;
+
+    return (
+        <input type="text" value={displayedText} onChange={onChange}/>
+    );
+}
