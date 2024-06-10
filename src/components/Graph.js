@@ -7,18 +7,16 @@ export function Graph(props) {
     };
 
     const OxAxisType = {
-        Store: "Store", Unemployment: "Unemployment"
+        ReleaseYear: "release_year", Score: "score"
     };
     
     const marginX = 50;
     const marginY = 50;
-    const height = 400;
-    const width = 800; 
+    const height = 500;
+    const width = 1000; 
 
     const [graphType,        setGraphType]        = React.useState(GraphType.Dot);
-    const [displayMinValues, setDisplayMinValues] = React.useState(true);
-    const [displayMaxValues, setDisplayMaxValues] = React.useState(false);
-    const [oxAxisType,       setOxAxisType]       = React.useState(OxAxisType.Store);
+    const [oxAxisType,       setOxAxisType]       = React.useState(OxAxisType.ReleaseYear);
     const [animateFromIndex, setAnimateFromIndex] = React.useState(-1);
     const [animateToIndex,   setAnimateToIndex]   = React.useState(0);
 
@@ -29,26 +27,21 @@ export function Graph(props) {
         let groupedData =[];
     
         for(const entry of groupObj) {
-            let minMax = d3.extent(entry[1].map(d => d["Weekly_Sales"]));
-            groupedData.push({labelX : entry[0], values : minMax});
+            let count = entry[1].length;
+            groupedData.push({x : entry[0], y : count});
         }
 
         return groupedData;
     }, [oxAxisType]);
 
     const [scaleX, scaleY] = React.useMemo(() => {
-        if(!displayMinValues && !displayMaxValues) {
-            return [null, null];
-        }
+        const range = d3.extent(graphData.map(d => d.y));
 
-        let firstRange = d3.extent(graphData.map(d => d.values[0]));
-        let secondRange = d3.extent(graphData.map(d => d.values[1]));
-
-        const min = displayMinValues ? firstRange[0] : secondRange[0]; 
-        const max = displayMinValues ? (displayMaxValues ? secondRange[1] : firstRange[1]) : secondRange[1];
+        const min = range[0]; 
+        const max = range[1];
         
         let scaleX = d3.scaleBand()
-            .domain(graphData.map(d => d.labelX))
+            .domain(graphData.map(d => d.x))
             .range([0, width - 2 * marginX]);
    
         let scaleY = d3.scaleLinear()
@@ -56,30 +49,17 @@ export function Graph(props) {
             .range([height - 2 * marginY, 0]);
 
         return [scaleX, scaleY];
-    }, [graphData, displayMinValues, displayMaxValues]);
+    }, [graphData]);
 
     const svgRef = React.useRef(null);
     //Main drawing function.
     React.useEffect(() => {
-        if(!scaleX) {
-            alert("Не выбраны значения для отрисовки на графике");
-            return;
-        }
-
         let svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
         svg.attr("height", height).attr("width", width);
 
         drawAxes(svg);
-
-        if (displayMinValues) 
-        {
-            drawData(svg, 0, "blue");
-        }
-        if (displayMaxValues) 
-        {
-            drawData(svg, 1, "red");
-        }
+        drawData(svg, "blue");
     }, [animateFromIndex, animateToIndex, trigger]);
     
     const drawAxes = (svg) => {
@@ -100,45 +80,39 @@ export function Graph(props) {
             .call(axisY);        
     };
 
-    const drawData = (svg, minMaxIndex, color) => {
+    const drawData = (svg, color) => {
         if(graphType === GraphType.Dot) {
             const r = 4;
-            const offset = (minMaxIndex === 0)? -r / 2 : r / 2;
-        
+            //const offset = (minMaxIndex === 0)? -r / 2 : r / 2;
             svg.selectAll(".dot")
                 .data(graphData)
                 .enter()
                 .append("circle")
                 .attr("r", r)
-                .attr("cx", d => scaleX(d.labelX) + scaleX.bandwidth() / 2)
-                .attr("cy", d => scaleY(d.values[minMaxIndex]) + offset)
+                .attr("cx", d => scaleX(d.x) + scaleX.bandwidth() / 2)
+                .attr("cy", d => scaleY(d.y))
                 .attr("transform", `translate(${marginX}, ${marginY})`)
                 .style("fill", color);
         }
         else if(graphType === GraphType.Histogram) {
             const barWidth = 5.0;
-            const offset = (minMaxIndex === 0) ? -barWidth / 2 : barWidth / 2;
+            //const offset = (minMaxIndex === 0) ? -barWidth / 2 : barWidth / 2;
             svg.selectAll(".dot")
                 .data(graphData)
                 .enter()
                 .append("rect")
                 .attr("width", barWidth)
-                .attr("x", d => scaleX(d.labelX) + scaleX.bandwidth() / 2)
-                .attr("height", d => height - marginY * 2 - scaleY(d.values[minMaxIndex]))
-                .attr("transform", d => `translate(${marginX - barWidth / 2 + offset},${marginY + scaleY(d.values[minMaxIndex])})`)
+                .attr("x", d => scaleX(d.x) + scaleX.bandwidth() / 2)
+                .attr("height", d => height - marginY * 2 - scaleY(d.y))
+                .attr("transform", d => `translate(${marginX - barWidth / 2},${marginY + scaleY(d.y)})`)
                 .style("fill", color);
         }
         else {
             //Animated line graph.
-            let pathId = "path" + minMaxIndex;
+            const pathId = "path0";
             let line = createPath(svg, color, pathId);
 
-            let reshapedData = [];
-            for(const item of graphData) {
-                reshapedData.push({x: item.labelX, y: item.values[minMaxIndex]});
-            }
-
-            let path = svg.select("#"+pathId).datum(reshapedData).attr("d", line);
+            let path = svg.select("#"+pathId).datum(graphData).attr("d", line);
 
             //Compute the region of the graph that should be animated.
             let duration;
@@ -157,15 +131,15 @@ export function Graph(props) {
             }
             else {
                 //Scales return undefined, if the passed value is outside of their boundaries.
-                for(let i = reshapedData.length - 1; i > animateToIndex; i--) {
-                    toPathLength += Math.sqrt(Math.pow(scaleX(reshapedData[i].x) - scaleX(reshapedData[i - 1].x), 2) + 
-                                              Math.pow(scaleY(reshapedData[i].y) - scaleY(reshapedData[i - 1].y), 2));
+                for(let i = graphData.length - 1; i > animateToIndex; i--) {
+                    toPathLength += Math.sqrt(Math.pow(scaleX(graphData[i].x) - scaleX(graphData[i - 1].x), 2) + 
+                                              Math.pow(scaleY(graphData[i].y) - scaleY(graphData[i - 1].y), 2));
                 }
 
                 fromPathLength = pathLength;
                 for(let i = 0; i < animateFromIndex; i++) {
-                    fromPathLength -= Math.sqrt(Math.pow(scaleX(reshapedData[i].x) - scaleX(reshapedData[i + 1].x), 2) +
-                                                Math.pow(scaleY(reshapedData[i].y) - scaleY(reshapedData[i + 1].y), 2));
+                    fromPathLength -= Math.sqrt(Math.pow(scaleX(graphData[i].x) - scaleX(graphData[i + 1].x), 2) +
+                                                Math.pow(scaleY(graphData[i].y) - scaleY(graphData[i + 1].y), 2));
                 }
             
                 duration = (fromPathLength - toPathLength) / pathLength * 2000;
@@ -199,20 +173,12 @@ export function Graph(props) {
 
     //--------------------------------------------
 
-    const storeRadioButtonClicked = () => {
-        setOxAxisType(OxAxisType.Store);
+    const yearRadioButtonClicked = () => {
+        setOxAxisType(OxAxisType.ReleaseYear);
     };
 
-    const unemploymentRadioButtonClicked = () => {
-        setOxAxisType(OxAxisType.Unemployment);
-    };
-
-    const minCheckboxClicked = () => {
-        setDisplayMinValues(!displayMinValues);
-    };
-
-    const maxCheckboxClicked = () => {
-        setDisplayMaxValues(!displayMaxValues);
+    const scoreRadioButtonClicked = () => {
+        setOxAxisType(OxAxisType.Score);
     };
     
     const dotsRadioButtonClicked = () => {
@@ -272,16 +238,10 @@ export function Graph(props) {
         <>
             <b>График</b>
             <p>Значение по оси OX</p>
-            <input type="radio" onClick={storeRadioButtonClicked} name="oxType" checked={oxAxisType === OxAxisType.Store}/>
-                <label>Магазин</label><br/>
-            <input type="radio" onClick={unemploymentRadioButtonClicked} name="oxType" checked={oxAxisType === OxAxisType.Unemployment}/>
-                <label>Безработица</label><br/>
-            
-            <p>Значение по оси OY</p>
-            <input type="checkbox" onClick={minCheckboxClicked} checked={displayMinValues}/>
-                <label>Минимальные продажи за неделю</label><br/>
-            <input type="checkbox" onClick={maxCheckboxClicked} checked={displayMaxValues}/>
-                <label>Максимальные продажи за неделю</label><br/>
+            <input type="radio" onClick={yearRadioButtonClicked} name="oxType" checked={oxAxisType === OxAxisType.ReleaseYear}/>
+                <label>Год</label><br/>
+            <input type="radio" onClick={scoreRadioButtonClicked} name="oxType" checked={oxAxisType === OxAxisType.Score}/>
+                <label>Баллы</label><br/>
             
             <p>Тип графика</p>
             <input type="radio" onClick={dotsRadioButtonClicked} name="graphType" checked={graphType === GraphType.Dot}/>

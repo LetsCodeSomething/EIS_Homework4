@@ -16,11 +16,6 @@ root.render(
 
 root.render(<>
     <h3>Рейтинг компьютерных игр</h3>
+    <Graph dataset={dataset}/>
     <Table dataset={dataset} rowsPerPage="25" selectedPage="0"/>
 </>);
-
-// root.render(<>
-//     <h3>Рейтинг компьютерных игр</h3>
-//     <Graph dataset={dataset}/>
-//     <Table dataset={dataset} rowsPerPage="25" selectedPage="0"/>
-// </>);
