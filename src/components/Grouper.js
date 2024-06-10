@@ -41,13 +41,10 @@ export function Grouper(props) {
 
     const groupingKeys = [
         [-1, "Нет"], 
-        ["Store", "Магазин"], 
-        ["Date", "Дата"], 
-        ["Holiday_Flag", "Выходной"], 
-        ["Temperature", "Температура"], 
-        ["Fuel_Price", "Цена топлива"], 
-        ["CPI", "Цена за показ"], 
-        ["Unemployment", "Безработица"]
+        ["title", "Название"],  
+        ["score_phrase", "Словесная оценка"], 
+        ["platform", "Платформа"], 
+        ["genre", "Жанр"]
     ];
 
     const functionNames = ["Кол.", "Макс.", "Мин.", "Сред."];
@@ -79,14 +76,14 @@ export function Grouper(props) {
             quantity = keys.map(key => groupedTableData[key].length);
         }
         if (filters["function"][1]) {
-            max = keys.map(key => Math.max(...groupedTableData[key].map(item => item["Weekly_Sales"])));
+            max = keys.map(key => Math.max(...groupedTableData[key].map(item => item["score"])));
         }
         if (filters["function"][2]) {
-            min = keys.map(key => Math.min(...groupedTableData[key].map(item => item["Weekly_Sales"])));
+            min = keys.map(key => Math.min(...groupedTableData[key].map(item => item["score"])));
         }
         if (filters["function"][3]) {
             mean = keys.map(key => {
-                let sum = groupedTableData[key].reduce((accumulator, current) => {return accumulator + current["Weekly_Sales"];}, 0);
+                let sum = groupedTableData[key].reduce((accumulator, current) => {return accumulator + current["score"];}, 0);
                 return sum /= 1.0 * groupedTableData[key].length;
             });
         }
@@ -119,7 +116,7 @@ export function Grouper(props) {
                             <td><Checkbox value={filters["function"][3]} disabled={filters["key"][0] === -1} filterName="function" index={3} updateFilters={updateFilters}/> среднее</td>
                         </tr>
                         <tr>
-                            <td>Применить к столбцу <b>Weekly_Sales</b>.</td>
+                            <td>Применить к столбцу <b>score</b>.</td>
                         </tr>
                         <tr>
                             <td><input type="button" onClick={resetFilters} value="Сбросить группировку" className="button-right"/></td>
