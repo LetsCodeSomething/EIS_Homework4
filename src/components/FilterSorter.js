@@ -25,7 +25,7 @@ export function FilterSorter(props) {
     };
 
     const defaultFilters = {
-        "title":         [FilterType.CharacterString, NaN],
+        "title":         [FilterType.CharacterString, ""],
         "score":         [FilterType.FloatInterval,   NaN, NaN],
         "score_phrase":  [FilterType.List, -1], 
         "platform":      [FilterType.List, -1],
@@ -46,7 +46,7 @@ export function FilterSorter(props) {
     const updateFilters = (filterName, filterValue, index) => {
         let filtersCopy = Object.assign(filters);
         filtersCopy[filterName][index] = filterValue;
-
+        
         let processedTableData = applySortsToData(applyFiltersToData(props.getRawTableData(), filtersCopy), sorts);
      
         forceUpdate();
@@ -101,9 +101,9 @@ export function FilterSorter(props) {
                 }
             }
             else if(filtersCopy[key][0] === FilterType.CharacterString) {
-                if(!isNaN(filtersCopy[key][1])) {
+                if(filtersCopy[key][1].length > 0) {
                     const a = filtersCopy[key][1].toLowerCase();
-                    tableData = tableData.filter(item => item[key].toLowerCase().includes(a));
+                    tableData = tableData.filter(item => item[key].toString().toLowerCase().includes(a));
                 }
             }
             else {
@@ -296,7 +296,7 @@ export function FilterSorter(props) {
     const sort3Keys = sorts[1]["key"] === -1 ? [] : sortKeys.filter(item => item[0] !== sorts[0]["key"] && item[0] !== sorts[1]["key"]);
     const sort3DropDownListDisabled = sorts[1]["key"] === -1;
     const sort3CheckboxDisabled = sorts[2]["key"] === -1;
-
+    
     return (
         <>
             <div>
