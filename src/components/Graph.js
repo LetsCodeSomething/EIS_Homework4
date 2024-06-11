@@ -31,7 +31,7 @@ export function Graph(props) {
             groupedData.push({x : entry[0], y : count});
         }
 
-        return groupedData;
+        return groupedData.sort((a, b) => {return a.x - b.x;});
     }, [oxAxisType]);
 
     const [scaleX, scaleY] = React.useMemo(() => {
