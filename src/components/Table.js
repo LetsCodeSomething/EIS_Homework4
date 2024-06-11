@@ -94,7 +94,7 @@ export function Table(props) {
         setSelectedPage(0);
     };
     const getRawTableData = () => {
-        return props.dataset;
+        return props.dataset.slice();
     };
     const getFilteredTableData = () => {
         return tableData;
