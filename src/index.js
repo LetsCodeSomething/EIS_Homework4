@@ -3,9 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 
 import './index.css';
-import dataset from './dataset/games';
-import {Table} from "./components/Table";
-import {Graph} from "./components/Graph";
+import {DataLoader} from './components/DataLoader';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -14,8 +12,10 @@ root.render(
     </React.StrictMode>
 );
 
-root.render(<>
-    <h3>Рейтинг компьютерных игр</h3>
-    <Graph dataset={dataset}/>
-    <Table dataset={dataset} rowsPerPage="25" selectedPage="0"/>
-</>);
+root.render(
+    <>
+        <DataLoader />
+    </>
+);	
+
+
