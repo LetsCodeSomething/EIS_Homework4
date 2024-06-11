@@ -129,32 +129,16 @@ export function FilterSorter(props) {
         //Dropdown lists may return strings and integer numbers.
         //The type check is done here to avoid using "==" later.
         sortsCopy[index][sortName] = isNaN(parseInt(sortValue)) ? sortValue : parseInt(sortValue);
-
-        //Reset levels of sort if the previous level was modified.
-        if(index === 0) {
-            if(sortsCopy[0]["key"] === -1) {
-                sortsCopy[0]["order"] = false;
-            }
-
-            sortsCopy[1]["key"] = -1;
-            sortsCopy[1]["order"] = false;
-            sortsCopy[2]["key"] = -1;
-            sortsCopy[2]["order"] = false;
+        
+        //Reset checkbox for the corresponding sort level if the sort was disabled.
+        if(sortsCopy[index]["key"] === -1) {
+            sortsCopy[index]["order"] = false;
         }
-        else if(index === 1) {
-            if(sortsCopy[1]["key"] === -1) {
-                sortsCopy[1]["order"] = false;
-            }
-
-            sortsCopy[2]["key"] = -1;
-            sortsCopy[2]["order"] = false;
+        //Reset all other levels of sort if the previous level was modified.
+        for(let i = index + 1; i < 3; i++) {
+            sortsCopy[i] = defaultSorts[i];
         }
-        else {
-            if(sortsCopy[2]["key"] === -1) {
-                sortsCopy[2]["order"] = false;
-            }
-        }
-
+        
         let processedTableData;
         if(sortsCopy[0]["key"] === -1) {
             processedTableData = applyFiltersToData(props.getRawTableData(), filters);
