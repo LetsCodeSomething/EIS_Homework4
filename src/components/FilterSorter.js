@@ -142,8 +142,17 @@ export function FilterSorter(props) {
             sortsCopy[2]["order"] = false;
         }
         else if(index === 1) {
+            if(sortsCopy[1]["key"] === -1) {
+                sortsCopy[1]["order"] = false;
+            }
+
             sortsCopy[2]["key"] = -1;
             sortsCopy[2]["order"] = false;
+        }
+        else {
+            if(sortsCopy[2]["key"] === -1) {
+                sortsCopy[2]["order"] = false;
+            }
         }
 
         let processedTableData;
