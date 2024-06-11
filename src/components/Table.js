@@ -87,7 +87,8 @@ export function Table(props) {
     const [selectedPage, setSelectedPage] = React.useState(parseInt(props.selectedPage));
     const updateSelectedPage = (value) => setSelectedPage(value);
 
-    const [tableData, setTableData] = React.useState(props.dataset);
+    //Use the copy of the dataset to fill the rows.
+    const [tableData, setTableData] = React.useState(props.dataset.slice());
     const updateTableData = (value) => {
         setTableData(value); 
         setSelectedPage(0);
